@@ -1,0 +1,91 @@
+// Import required modules
+const express = require('express');
+const mongoose = require('mongoose');
+
+// Create an instance of Express
+const app = express();
+
+// Set up JSON body parsing
+app.use(express.json());
+
+// Connect to MongoDB
+mongoose.connect('mongodb://localhost/contactlist', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+const db = mongoose.connection;
+
+// Create a Contact schema
+const contactSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  phone: String,
+});
+
+// Create a Contact model
+const Contact = mongoose.model('Contact', contactSchema);
+
+// Define routes
+
+// Get all contacts
+app.get('/contacts', async (req, res) => {
+  try {
+    const contacts = await Contact.find();
+    res.json(contacts);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create a new contact
+app.post('/contacts', async (req, res) => {
+  try {
+    const { name, email, phone } = req.body;
+    const contact = new Contact({ name, email, phone });
+    const savedContact = await contact.save();
+    res.status(201).json(savedContact);
+  } catch (error) {
+    res.status(400).json({ error: 'Bad request' });
+  }
+});
+
+// Update a contact
+app.put('/contacts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, phone } = req.body;
+    const updatedContact = await Contact.findByIdAndUpdate(
+      id,
+      { name, email, phone },
+      { new: true }
+    );
+    if (updatedContact) {
+      res.json(updatedContact);
+    } else {
+      res.status(404).json({ error: 'Contact not found' });
+    }
+  } catch (error) {
+    res.status(400).json({ error: 'Bad request' });
+  }
+});
+
+// Delete a contact
+app.delete('/contacts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedContact = await Contact.findByIdAndDelete(id);
+    if (deletedContact) {
+      res.json(deletedContact);
+    } else {
+      res.status(404).json({ error: 'Contact not found' });
+    }
+  } catch (error) {
+    res.status(400).json({ error: 'Bad request' });
+  }
+});
+
+// Start the server
+const port = 3000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
